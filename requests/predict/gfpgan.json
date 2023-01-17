@@ -1,0 +1,5 @@
+{
+  "version": "{VERSION}",
+  "img": "{IMAGE}",
+  "scale": "{SCALE}"
+}

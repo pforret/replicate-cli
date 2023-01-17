@@ -1,6 +1,15 @@
 {
-  "version": "{VERSION}}",
+  "version": "{VERSION}",
   "input": {
-    "text": "{PROMPT}"
+    "prompt": "{PROMPT}",
+    "negative_prompt": "{NEGATIVE}",
+    "prompt_strength": "{STRENGTH}",
+    "width": "{WIDTH}",
+    "height": "{HEIGHT}",
+    "num_outputs": "{OUTPUTS}",
+    "num_inference_steps": "{STEPS}",
+    "guidance_scale": "{GUIDANCE}",
+    "scheduler": "{SCHEDULE}",
+    "seed": "{SEED}"
   }
 }

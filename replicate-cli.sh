@@ -51,18 +51,19 @@ flag|v|verbose|also show debug messages
 flag|f|force|do not ask for confirmation (always yes)
 option|l|log_dir|folder for log files |$HOME/log/$script_prefix
 option|t|tmp_dir|folder for temp files|.tmp
-option|C|COUNT|Number of outputs|1
 option|G|GUIDANCE|Classifier-free guidance|7.5
 option|H|HEIGHT|Image height|512
 option|M|MODEL|Prediction model to use|stability-ai/stable-diffusion
-option|N|STEPS|Number of steps|50
+option|N|NEGATIVE|Negative Prompt|
+option|O|OUTPUTS|Number of outputs|1
+option|Q|STEPS|Number of steps|50
 option|R|STRENGTH|Prompt strength (0-1)|0.8
 option|S|SCHEDULE|Scheduler|DPMSolverMultistep
 option|T|REPLICATE_API_TOKEN|Replicate.com API token|
 option|V|VERSION|Prediction model version|
 option|W|WIDTH|Image width|512
-option|X|SEED|Force start seeding|
-choice|1|action|action to perform|collections,models,predict,check,env,update
+option|X|SEED|Force start seeding|-1
+choice|1|action|action to perform|collections,models,predict,predictions,request,check,env,update
 param|?|prompt|prompt
 param|?|negative|negative prompt
 " -v -e '^#' -e '^\s*$'
@@ -75,35 +76,22 @@ param|?|negative|negative prompt
 Script:main() {
   IO:log "[$script_basename] $script_version started"
 
-  Os:require "awk"
+  Os:require "gawk"
   Os:require "curl"
   Os:require "jq"
 
   local endpoint
   action=$(Str:lower "$action")
   case $action in
-    predict)
-      #TIP: use «$script_prefix predict» to ...
-      #TIP:> $script_prefix predict
-      #     curl -s -X POST \
-      # -d '{"version": "5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa", "input": {"text": "Alice"}}' \
-      # -H "Authorization: Token (token)" \
-      # -H 'Content-Type: application/json' \
-      # https://api.replicate.com/v1/predictions
-      endpoint="https://api.replicate.com/v1/predictions"
-      curl -s -X POST -H "Authorization: Token $REPLICATE_API_TOKEN" -H 'Content-Type: application/json' -d "{\"input\#}" "$endpoint"
-
-      ;;
-
     collections)
       #TIP: use «$script_prefix collections» to list all collections
       #TIP:> $script_prefix collections
       endpoint="https://replicate.com/explore"
-      collection=${prompt:-diffusion-models}
+      [[ -z "$REPLICATE_API_TOKEN" ]] && IO:die "Need REPLICATE_API_TOKEN - get one at https://replicate.com/docs/reference/http#authentication"
       IO:success "These are the collection names you can use for '$script_basename models [collection]'"
       get_api "$endpoint" Y html \
       | grep "/collections/" \
-      | awk 'match($0, /href="([^"]*)"/, a) {print a[1]}' \
+      | gawk 'match($0, /href="([^"]*)"/, a) {print a[1]}' \
       | sort -u \
       | cut -d/ -f3 \
       | awk '{printf "%-20s : %s\n" , $1, "https://replicate.com/collections/"$1}'
@@ -116,7 +104,8 @@ Script:main() {
       #TIP:> $script_prefix models image-to-text
       #TIP:> $script_prefix models super-resolution
       endpoint="https://api.replicate.com/v1/collections"
-      collection=${prompt:-diffusion-models}
+      local collection=${prompt:-diffusion-models}
+      [[ -z "$REPLICATE_API_TOKEN" ]] && IO:die "Need REPLICATE_API_TOKEN - get one at https://replicate.com/docs/reference/http#authentication"
       IO:success "These are the models you can use for '$script_basename -M [model] predict ...'"
       IO:announce "Collection: $collection"
       get_api "$endpoint/$collection" \
@@ -124,6 +113,75 @@ Script:main() {
       | sort -u \
       | awk '{ full=$1; gsub( "https://replicate.com/", "", $1 ); printf "%-40s : %s\n" , $1, full;}'
       ;;
+
+    model)
+      #TIP: use «$script_prefix models» to list all models for a collection
+      #TIP:> $script_prefix model
+      #TIP:> $script_prefix model cjwbw/stable-diffusion-v2.1
+      endpoint="https://api.replicate.com/v1/models"
+      local model=${prompt:-stability-ai/stable-diffusion}
+      [[ -z "$REPLICATE_API_TOKEN" ]] && IO:die "Need REPLICATE_API_TOKEN - get one at https://replicate.com/docs/reference/http#authentication"
+      IO:success "Model      : $model"
+      local latest_version
+      local description
+      local inputs
+      latest_version=$(get_api "$endpoint/$model" | jq -r ".latest_version.id")
+      IO:success "Version    : $latest_version"
+      description=$(get_api "$endpoint/$model" | jq -r ".description")
+      IO:success "Description: $description"
+      inputs=$(get_api "$endpoint/$model" | jq -r ".latest_version.openapi_schema.components.schemas.Input.properties | keys[]" | xargs)
+      IO:success "Parameters : $inputs"
+
+      ;;
+
+    predict)
+      #TIP: use «$script_prefix predict» to ...
+      #TIP:> $script_prefix predict
+      endpoint="https://api.replicate.com/v1/predictions"
+      local request="$tmp_dir/request.$$.json"
+      local template="requests/predict/stable-diffusion.json"
+      IO:debug "Creating request $request from template $template"
+      # shellcheck disable=2153
+      < "$template" gawk \
+        -v GUIDANCE="$GUIDANCE" \
+        -v HEIGHT="$HEIGHT" \
+        -v NEGATIVE="$NEGATIVE" \
+        -v OUTPUTS="$OUTPUTS" \
+        -v PROMPT="$prompt" \
+        -v SCHEDULE="$SCHEDULE" \
+        -v SEED="$SEED" \
+        -v STEPS="$STEPS" \
+        -v STRENGTH="$STRENGTH" \
+        -v VERSION="$(get_latest_version "$MODEL")" \
+        -v WIDTH="$WIDTH" \
+        '
+        {
+        gsub("{GUIDANCE}",GUIDANCE);
+        gsub("{HEIGHT}",HEIGHT);
+        gsub("{NEGATIVE}",NEGATIVE);
+        gsub("{OUTPUTS}",OUTPUTS);
+        gsub("{PROMPT}",PROMPT);
+        gsub("{SCHEDULE}",SCHEDULE);
+        gsub("{SEED}",SEED);
+        gsub("{STEPS}",STEPS);
+        gsub("{STRENGTH}",STRENGTH);
+        gsub("{VERSION}",VERSION);
+        gsub("{WIDTH}",WIDTH);
+        print
+        }' > "$request"
+
+        post_api "$endpoint" "$request"
+      ;;
+
+    predictions)
+       endpoint="https://api.replicate.com/v1/predictions"
+       get_api "$endpoint" | jq ".results | map(.id,.created_at,.input.prompt,.error)"
+       ;;
+
+    request)
+       endpoint="https://api.replicate.com/v1/predictions"
+       get_api "$endpoint/$prompt" N
+       ;;
 
     check | env)
       ## leave this default action, it will make it easier to test your script
@@ -158,6 +216,8 @@ Script:main() {
 function post_api() {
   local endpoint="$1"
   local request="$2"
+
+  [[ -z "$REPLICATE_API_TOKEN" ]] && IO:die "Need REPLICATE_API_TOKEN - get one at https://replicate.com/docs/reference/http#authentication"
   curl -s -X POST \
     -H "Authorization: Token $REPLICATE_API_TOKEN" \
     -H 'Content-Type: application/json' \
@@ -168,13 +228,16 @@ function get_api() {
   local endpoint="$1"
   local use_cache="${2:-Y}"
   local extension="${3:-json}"
+  local cache_file
+
+  [[ -z "$REPLICATE_API_TOKEN" ]] && IO:die "Need REPLICATE_API_TOKEN - get one at https://replicate.com/docs/reference/http#authentication"
 
   cache_file=$(derive_cache_file "$endpoint" "$extension")
   if [[ "$use_cache" == "Y" && -f "$cache_file" ]] ; then
     IO:debug "Use cached response [$cache_file]"
     cat "$cache_file"
   else
-    IO:debug "Get reponse from API [$cache_file]"
+    IO:debug "Get response from API [$cache_file]"
     curl -s \
       -H "Authorization: Token $REPLICATE_API_TOKEN" \
       "$endpoint" \
@@ -185,9 +248,19 @@ function get_api() {
 function derive_cache_file(){
   local endpoint="$1"
   local extension="${2:-json}"
+  local domain
+  local cache_id
+
   domain=$(echo "$endpoint" | cut -d/ -f3)
   cache_id=$(echo "$endpoint" | Str:digest 8)
   echo "$tmp_dir/$domain-$cache_id.$extension"
+}
+
+function get_latest_version(){
+  local model="$1"
+  local endpoint="https://api.replicate.com/v1/models"
+  get_api "$endpoint/$model" \
+  | jq -r ".latest_version.id"
 }
 #####################################################################
 ################### DO NOT MODIFY BELOW THIS LINE ###################
@@ -338,8 +411,8 @@ function Tool:calc() {
 }
 
 function Tool:round() {
-  number=${1}
-  decimals=${2:-0}
+  local number=${1}
+  local decimals=${2:-0}
 
   awk "BEGIN {print sprintf( \"%.${decimals}f\" , $number )};"
 }
@@ -369,6 +442,7 @@ function Tool:throughput() {
   local duration
   local seconds
   local time_finished
+  local ops
 
   [[ -z "$time_started" ]] && time_started="$script_started_at"
   time_finished=$(Tool:time)
