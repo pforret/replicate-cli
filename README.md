@@ -13,19 +13,49 @@ Bash CLI for use with Replicate.com APIBash CLI for use with Replicate.com API
 ## 🔥 Usage
 
 ```
-Program: replicate-cli 0.0.1 by peter@forret.com
-Updated: 2023-01-17
-Description: Bash CLI for use with Replicate.com APIBash CLI for use with Replicate.com API
-Usage: normal.sh [-h] [-q] [-v] [-f] [-l <log_dir>] [-t <tmp_dir>] <action> <input?>
+Program : replicate-cli  by peter@forret.com
+Version : v0.0.2 (2023-01-17 16:23)
+Purpose : Bash CLI for use with Replicate.com API
+Usage   : replicate-cli [-h] [-q] [-v] [-f] [-l <log_dir>] [-t <tmp_dir>] [-C <COUNT>] [-G <GUIDANCE>] [-H <HEIGHT>] [-M <MODEL>] [-N <STEPS>] [-R <STRENGTH>] [-S <SCHEDULE>] [-T <REPLICATE_API_TOKEN>] [-V <VERSION>] [-W <WIDTH>
+] [-X <SEED>] <action> <prompt?> <negative?>
 Flags, options and parameters:
     -h|--help        : [flag] show usage [default: off]
     -q|--quiet       : [flag] no output [default: off]
-    -v|--verbose     : [flag] output more [default: off]
+    -v|--verbose     : [flag] also show debug messages [default: off]
     -f|--force       : [flag] do not ask for confirmation (always yes) [default: off]
-    -l|--log_dir <?> : [option] folder for log files   [default: /Users/pforret/log/normal]
+    -l|--log_dir <?> : [option] folder for log files   [default: /home/pforret/log/replicate-cli]
     -t|--tmp_dir <?> : [option] folder for temp files  [default: .tmp]
-    <action>         : [parameter] action to perform: analyze/convert
-    <input>          : [parameter] input file/text (optional)
+    -C|--COUNT <?>   : [option] Number of outputs  [default: 1]
+    -G|--GUIDANCE <?>: [option] Classifier-free guidance  [default: 7.5]
+    -H|--HEIGHT <?>  : [option] Image height  [default: 512]
+    -M|--MODEL <?>   : [option] Prediction model to use  [default: stability-ai/stable-diffusion]
+    -N|--STEPS <?>   : [option] Number of steps  [default: 50]
+    -R|--STRENGTH <?>: [option] Prompt strength (0-1)  [default: 0.8]
+    -S|--SCHEDULE <?>: [option] Scheduler  [default: DPMSolverMultistep]
+    -T|--REPLICATE_API_TOKEN <?>: [option] Replicate.com API token
+    -V|--VERSION <?> : [option] Prediction model version
+    -W|--WIDTH <?>   : [option] Image width  [default: 512]
+    -X|--SEED <?>    : [option] Force start seeding
+    <action>         : [choice] action to perform  [options: collections,models,predict,check,env,update]
+    <prompt>         : [parameter] prompt (optional)
+    <negative>       : [parameter] negative prompt (optional)
+
+### TIPS & EXAMPLES
+* use replicate-cli predict to ...
+  replicate-cli predict
+* use replicate-cli collections to list all collections
+  replicate-cli collections
+* use replicate-cli models to list all models for a collection
+  replicate-cli models
+  replicate-cli models image-to-text
+  replicate-cli models super-resolution
+* use replicate-cli check to check if this script is ready to execute and what values the options/flags are
+  replicate-cli check
+* use replicate-cli env to generate an example .env file
+  replicate-cli env > .env
+* use replicate-cli update to update to the latest version
+  replicate-cli update
+* >>> bash script created with pforret/bashew
 ```
 
 ## ⚡️ Examples
