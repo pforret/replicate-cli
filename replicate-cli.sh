@@ -122,7 +122,7 @@ Script:main() {
       get_api "$endpoint/$collection" \
       | jq -r ".models[].url" \
       | sort -u \
-      | awk '{ full=$1; gsub( "https://replicate.com/", "", $1 ); printf "%-50s : %s\n" , $1, full;}'
+      | awk '{ full=$1; gsub( "https://replicate.com/", "", $1 ); printf "%-40s : %s\n" , $1, full;}'
       ;;
 
     check | env)

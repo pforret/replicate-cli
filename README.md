@@ -61,8 +61,31 @@ Flags, options and parameters:
 ## ⚡️ Examples
 
 ```bash
-> replicate-cli .
-# start PhpStorm with current folder as project
+> replicate-cli collections
+✅  These are the collection names you can use for 'replicate-cli models [collection]'
+diffusion-models     : https://replicate.com/collections/diffusion-models
+image-restoration    : https://replicate.com/collections/image-restoration
+image-to-text        : https://replicate.com/collections/image-to-text
+ml-makeovers         : https://replicate.com/collections/ml-makeovers
+style-transfer       : https://replicate.com/collections/style-transfer
+super-resolution     : https://replicate.com/collections/super-resolution
+text-to-image        : https://replicate.com/collections/text-to-image
+
+> replicate-cli models super-resolution
+✅  These are the models you can use for 'replicate-cli -M [model] predict ...'
+⏳  Collection: super-resolution
+cjwbw/rudalle-sr                         : https://replicate.com/cjwbw/rudalle-sr
+cjwbw/swin2sr                            : https://replicate.com/cjwbw/swin2sr
+codeslake/refvsr-cvpr2022                : https://replicate.com/codeslake/refvsr-cvpr2022
+jingyunliang/hcflow-sr                   : https://replicate.com/jingyunliang/hcflow-sr
+jingyunliang/swinir                      : https://replicate.com/jingyunliang/swinir
+longguangwang/arbsr                      : https://replicate.com/longguangwang/arbsr
+nightmareai/latent-sr                    : https://replicate.com/nightmareai/latent-sr
+nightmareai/real-esrgan                  : https://replicate.com/nightmareai/real-esrgan
+raoumer/srrescgan                        : https://replicate.com/raoumer/srrescgan
+wzx0826/lbnet                            : https://replicate.com/wzx0826/lbnet
+xinntao/esrgan                           : https://replicate.com/xinntao/esrgan
+xpixelgroup/hat                          : https://replicate.com/xpixelgroup/hat
 ```
 
 ## 🚀 Installation
