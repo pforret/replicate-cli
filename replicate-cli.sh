@@ -12,7 +12,7 @@ script_version="0.0.1" # if there is a VERSION.md in this script's folder, that 
 readonly script_author="peter@forret.com"
 readonly script_created="2023-01-17"
 readonly run_as_root=-1 # run_as_root: 0 = don't check anything / 1 = script MUST run as root / -1 = script MAY NOT run as root
-readonly script_description="Bash CLI for use with Replicate.com APIBash CLI for use with Replicate.com API"
+readonly script_description="Bash CLI for use with Replicate.com API"
 ## some initialisation
 action=""
 script_prefix=""
@@ -50,19 +50,19 @@ flag|q|quiet|no output
 flag|v|verbose|also show debug messages
 flag|f|force|do not ask for confirmation (always yes)
 option|l|log_dir|folder for log files |$HOME/log/$script_prefix
-option|t|tmp_dir|folder for temp files|/tmp/$script_prefix
-option|T|REPLICATE_API_TOKEN|Replicate.com API token|
-option|M|MODEL|Prediction model to use|stability-ai/stable-diffusion
-option|V|VERSION|Prediction model version|
-option|P|PROMPT_STRENGTH|Prompt strength (0-1)|0.8
+option|t|tmp_dir|folder for temp files|.tmp
 option|C|COUNT|Number of outputs|1
-option|N|STEPS|Number of steps|50
 option|G|GUIDANCE|Classifier-free guidance|7.5
-option|S|SCHEDULER|Scheduler|DPMSolverMultistep
-option|W|WIDTH|Image width|512
 option|H|HEIGHT|Image height|512
+option|M|MODEL|Prediction model to use|stability-ai/stable-diffusion
+option|N|STEPS|Number of steps|50
+option|R|STRENGTH|Prompt strength (0-1)|0.8
+option|S|SCHEDULE|Scheduler|DPMSolverMultistep
+option|T|REPLICATE_API_TOKEN|Replicate.com API token|
+option|V|VERSION|Prediction model version|
+option|W|WIDTH|Image width|512
 option|X|SEED|Force start seeding|
-choice|1|action|action to perform|predict,action2,check,env,update
+choice|1|action|action to perform|collections,models,predict,check,env,update
 param|?|prompt|prompt
 param|?|negative|negative prompt
 " -v -e '^#' -e '^\s*$'
@@ -79,24 +79,50 @@ Script:main() {
   Os:require "curl"
   Os:require "jq"
 
+  local endpoint
   action=$(Str:lower "$action")
   case $action in
     predict)
       #TIP: use «$script_prefix predict» to ...
       #TIP:> $script_prefix predict
-  #     curl -s -X POST \
-  # -d '{"version": "5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa", "input": {"text": "Alice"}}' \
-  # -H "Authorization: Token (token)" \
-  # -H 'Content-Type: application/json' \
-  # https://api.replicate.com/v1/predictions
+      #     curl -s -X POST \
+      # -d '{"version": "5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa", "input": {"text": "Alice"}}' \
+      # -H "Authorization: Token (token)" \
+      # -H 'Content-Type: application/json' \
+      # https://api.replicate.com/v1/predictions
+      endpoint="https://api.replicate.com/v1/predictions"
+      curl -s -X POST -H "Authorization: Token $REPLICATE_API_TOKEN" -H 'Content-Type: application/json' -d "{\"input\#}" "$endpoint"
 
-      do_predict
       ;;
 
-    action2)
-      #TIP: use «$script_prefix action2» to ...
-      #TIP:> $script_prefix action2
-      do_action2
+    collections)
+      #TIP: use «$script_prefix collections» to list all collections
+      #TIP:> $script_prefix collections
+      endpoint="https://replicate.com/explore"
+      collection=${prompt:-diffusion-models}
+      IO:success "These are the collection names you can use for '$script_basename models [collection]'"
+      get_api "$endpoint" Y html \
+      | grep "/collections/" \
+      | awk 'match($0, /href="([^"]*)"/, a) {print a[1]}' \
+      | sort -u \
+      | cut -d/ -f3 \
+      | awk '{printf "%-20s : %s\n" , $1, "https://replicate.com/collections/"$1}'
+
+      ;;
+
+    models)
+      #TIP: use «$script_prefix models» to list all models for a collection
+      #TIP:> $script_prefix models
+      #TIP:> $script_prefix models image-to-text
+      #TIP:> $script_prefix models super-resolution
+      endpoint="https://api.replicate.com/v1/collections"
+      collection=${prompt:-diffusion-models}
+      IO:success "These are the models you can use for '$script_basename -M [model] predict ...'"
+      IO:announce "Collection: $collection"
+      get_api "$endpoint/$collection" \
+      | jq -r ".models[].url" \
+      | sort -u \
+      | awk '{ full=$1; gsub( "https://replicate.com/", "", $1 ); printf "%-50s : %s\n" , $1, full;}'
       ;;
 
     check | env)
@@ -128,21 +154,41 @@ Script:main() {
 ## Put your helper scripts here
 #####################################################################
 
-do_predict() {
-  IO:log "predict"
-  # Examples of required binaries/scripts and how to install them
-  # Os:require "ffmpeg"
-  # Os:require "convert" "imagemagick"
-  # Os:require "IO:progressbar" "basher install pforret/IO:progressbar"
-  # (code)
+
+function post_api() {
+  local endpoint="$1"
+  local request="$2"
+  curl -s -X POST \
+    -H "Authorization: Token $REPLICATE_API_TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d @"$request" "$endpoint"
 }
 
-do_action2() {
-  IO:log "action2"
-  # (code)
+function get_api() {
+  local endpoint="$1"
+  local use_cache="${2:-Y}"
+  local extension="${3:-json}"
 
+  cache_file=$(derive_cache_file "$endpoint" "$extension")
+  if [[ "$use_cache" == "Y" && -f "$cache_file" ]] ; then
+    IO:debug "Use cached response [$cache_file]"
+    cat "$cache_file"
+  else
+    IO:debug "Get reponse from API [$cache_file]"
+    curl -s \
+      -H "Authorization: Token $REPLICATE_API_TOKEN" \
+      "$endpoint" \
+      | tee "$cache_file"
+  fi
 }
 
+function derive_cache_file(){
+  local endpoint="$1"
+  local extension="${2:-json}"
+  domain=$(echo "$endpoint" | cut -d/ -f3)
+  cache_id=$(echo "$endpoint" | Str:digest 8)
+  echo "$tmp_dir/$domain-$cache_id.$extension"
+}
 #####################################################################
 ################### DO NOT MODIFY BELOW THIS LINE ###################
 #####################################################################
@@ -320,10 +366,14 @@ function Tool:throughput() {
   local time_started="$1"
   local operations=${2:-1}
   local name=${3:-operation}
+  local duration
+  local seconds
+  local time_finished
 
-  local time_finished=$(Tool:time)
+  [[ -z "$time_started" ]] && time_started="$script_started_at"
+  time_finished=$(Tool:time)
   duration=$(Tool:calc "$time_finished - $time_started")
-  seconds=$(Tool:round $duration)
+  seconds=$(Tool:round "$duration")
   if [[ "$operations" -gt 1 ]] ; then
     if [[ $operations -gt $seconds ]] ; then
       ops=$(Tool:calc "$operations / $duration" )

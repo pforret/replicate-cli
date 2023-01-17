@@ -1,0 +1,6 @@
+{
+  "version": "{VERSION}}",
+  "input": {
+    "text": "{PROMPT}"
+  }
+}
