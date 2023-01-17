@@ -48,6 +48,7 @@ or with `git`
 
 ## 📝 Acknowledgements
 
+* Replicate API on [replicate.com/docs/reference/http](https://replicate.com/docs/reference/http)
 * script created with [bashew](https://github.com/pforret/bashew)
 
 &copy; 2023 Peter Forret

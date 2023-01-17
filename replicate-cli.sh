@@ -51,8 +51,20 @@ flag|v|verbose|also show debug messages
 flag|f|force|do not ask for confirmation (always yes)
 option|l|log_dir|folder for log files |$HOME/log/$script_prefix
 option|t|tmp_dir|folder for temp files|/tmp/$script_prefix
-choice|1|action|action to perform|action1,action2,check,env,update
-#param|?|input|input file/text
+option|T|REPLICATE_API_TOKEN|Replicate.com API token|
+option|M|MODEL|Prediction model to use|stability-ai/stable-diffusion
+option|V|VERSION|Prediction model version|
+option|P|PROMPT_STRENGTH|Prompt strength (0-1)|0.8
+option|C|COUNT|Number of outputs|1
+option|N|STEPS|Number of steps|50
+option|G|GUIDANCE|Classifier-free guidance|7.5
+option|S|SCHEDULER|Scheduler|DPMSolverMultistep
+option|W|WIDTH|Image width|512
+option|H|HEIGHT|Image height|512
+option|X|SEED|Force start seeding|
+choice|1|action|action to perform|predict,action2,check,env,update
+param|?|prompt|prompt
+param|?|negative|negative prompt
 " -v -e '^#' -e '^\s*$'
 }
 
@@ -64,13 +76,21 @@ Script:main() {
   IO:log "[$script_basename] $script_version started"
 
   Os:require "awk"
+  Os:require "curl"
+  Os:require "jq"
 
   action=$(Str:lower "$action")
   case $action in
-    action1)
-      #TIP: use «$script_prefix action1» to ...
-      #TIP:> $script_prefix action1
-      do_action1
+    predict)
+      #TIP: use «$script_prefix predict» to ...
+      #TIP:> $script_prefix predict
+  #     curl -s -X POST \
+  # -d '{"version": "5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa", "input": {"text": "Alice"}}' \
+  # -H "Authorization: Token (token)" \
+  # -H 'Content-Type: application/json' \
+  # https://api.replicate.com/v1/predictions
+
+      do_predict
       ;;
 
     action2)
@@ -108,8 +128,8 @@ Script:main() {
 ## Put your helper scripts here
 #####################################################################
 
-do_action1() {
-  IO:log "action1"
+do_predict() {
+  IO:log "predict"
   # Examples of required binaries/scripts and how to install them
   # Os:require "ffmpeg"
   # Os:require "convert" "imagemagick"
