@@ -122,6 +122,7 @@ Script:main() {
       local model=${prompt:-stability-ai/stable-diffusion}
       [[ -z "$REPLICATE_API_TOKEN" ]] && IO:die "Need REPLICATE_API_TOKEN - get one at https://replicate.com/docs/reference/http#authentication"
       IO:success "Model      : $model"
+      IO:success "URL        : https://replicate.com/$model"
       local latest_version
       local description
       local inputs

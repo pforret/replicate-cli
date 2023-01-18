@@ -1,0 +1,10 @@
+{
+  "text": "{PROMPT}",
+  "save_as_png": false,
+  "progressive_outputs": false,
+  "seamless": false,
+  "grid_size": 5,
+  "temperature": 4,
+  "top_k": 64,
+  "supercondition_factor": 16
+}
