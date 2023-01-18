@@ -171,17 +171,24 @@ Script:main() {
         print
         }' > "$request"
 
-        post_api "$endpoint" "$request"
+        local digest
+        digest=$(sha1sum "$request" | cut -c1-12)
+
+        post_api "$endpoint" "$request" \
+        | tee "$tmp_dir/job.$digest.json" \
+        | jq ".urls.get"
       ;;
 
     predictions)
        endpoint="https://api.replicate.com/v1/predictions"
-       get_api "$endpoint" | jq ".results | map(.id,.created_at,.input.prompt,.error)"
+       get_api "$endpoint" \
+       | jq ".results | map(.id,.created_at,.input.prompt,.error)"
        ;;
 
     request)
        endpoint="https://api.replicate.com/v1/predictions"
-       get_api "$endpoint/$prompt" N
+       get_api "$endpoint/$prompt" \
+       | jq -r ".output[]"
        ;;
 
     check | env)
